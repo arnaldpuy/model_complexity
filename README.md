@@ -1,8 +1,8 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4898904.svg)](https://doi.org/10.5281/zenodo.4898904)
 
-# Model complexity fosters model uncertainty
+# Models with higher effective dimensions produce more uncertain estimates
 
-Arnald Puy, Pierfrancesco Beneventano, Samuele Lo Piano, Tomasso Portaluri, Simon A. Levin, Andrea Saltelli
+Arnald Puy, Pierfrancesco Beneventano, Samuele Lo Piano, Tommaso Portaluri, Simon A. Levin, Andrea Saltelli
 
 This is the R code of the paper, whose abstract is the following: 
 
