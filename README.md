@@ -2,7 +2,7 @@
 
 # Models with higher effective dimensions produce more uncertain estimates
 
-Arnald Puy, Pierfrancesco Beneventano, Samuele Lo Piano, Tommaso Portaluri, Simon A. Levin, Andrea Saltelli
+Arnald Puy, Pierfrancesco Beneventano, Simon A. Levin, Samuele Lo Piano, Tommaso Portaluri, Andrea Saltelli
 
 This is the R code of the paper, whose abstract is the following: 
 

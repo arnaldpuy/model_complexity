@@ -413,15 +413,15 @@ psacoin.ks.plot <- ind.psacoin[!sensitivity == "Ti"] %>%
   .[, sum(original), .(sensitivity, compartment)] %>%
   ggplot(., aes(compartment, V1, fill = sensitivity, order = sensitivity)) +
   geom_col(position = position_stack(reverse = TRUE), color = "black") +
-  labs(x = "", y = "$\\sum S_i + \\sum S_{ij} + \\sum S_{ijl}$") +
+  labs(x = "", y = "$\\sum S_i + \\sum S_{i,j} + \\sum S_{i,j,l}$") +
   scale_fill_manual(name = "Sensitivity", 
-                    labels = c("$S_i$", "$S_{ij}$", "$S_{ijl}$"), 
+                    labels = c("$S_i$", "$S_{i,j}$", "$S_{i,j,l}$"), 
                     values = wes_palette("Cavalcanti1")) +
   geom_hline(yintercept = 0.99, lty = 2) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
   theme_AP() +
   theme(legend.position = "none", 
-        axis.title.y = element_text(size = 8)) +
+        axis.title.y = element_text(size = 7)) +
   annotation_custom(textGrob("p", gp = gpar(col = "red")), 
                     xmin = 3.5, xmax = 3.5, ymin = 0.98, ymax = 0.98) 
 ```
@@ -699,16 +699,16 @@ high.order.bateman <- ind.bateman[!sensitivity == "Ti"] %>%
   .[, dim:= as.numeric(dim)] %>%
   ggplot(., aes(dim, V1, fill = sensitivity)) +
   geom_col(position = position_stack(reverse = TRUE), color = "black") +
-  labs(x = "$k$", y = "$\\sum S_i + \\sum S_{ij} + \\sum S_{ijl}$") +
+  labs(x = "$k$", y = "$\\sum S_i + \\sum S_{i,j} + \\sum S_{i,j,l}$") +
   geom_hline(yintercept = 0.99, lty = 2) +
   scale_fill_manual(name = "", 
-                      labels = c("$S_i$", "$S_{ij}$", "$S_{ijl}$"), 
+                      labels = c("$S_i$", "$S_{i,j}$", "$S_{i,j,l}$"), 
                       values = wes_palette("Cavalcanti1")) +
   annotation_custom(textGrob("p", gp = gpar(col = "red")), 
                     xmin = 10.45, xmax = 10.45, ymin = 0.98, ymax = 0.98) +
   theme_AP() +
   theme(legend.position = "none", 
-        axis.title.y = element_text(size = 8))
+        axis.title.y = element_text(size = 7))
 
   
 high.order.bateman
@@ -1248,10 +1248,10 @@ covid.ks <-
   .[, model:= factor(model, levels = type_model)] %>%
   ggplot(., aes(variable, V1, fill = sensitivity)) +
   geom_col(position = position_stack(reverse = TRUE), color = "black") +
-  labs(x = "", y = "$\\sum S_i + \\sum S_{ij} + \\sum S_{ijl}$") +
+  labs(x = "", y = "$\\sum S_i + \\sum S_{i,j} + \\sum S_{i,j,l}$") +
   geom_hline(yintercept = 0.99, lty = 2) +
   scale_fill_manual(name = "", 
-                    labels = c("$S_i$", "$S_{ij}$", "$S_{ijl}$"), 
+                    labels = c("$S_i$", "$S_{i,j}$", "$S_{i,j,l}$"), 
                     values = wes_palette("Cavalcanti1")) +
   annotation_custom(textGrob("p", gp = gpar(col = "red")), 
                     xmin = 1, xmax = 1, ymin = 0.98, ymax = 0.98) +
@@ -1636,7 +1636,7 @@ b <- all.ind[!sensitivity == "Ti", sum(original), .(et0.formulae, output, sensit
   ggplot(., aes(output, V1, fill = sensitivity)) +
   geom_col(position = position_stack(reverse = TRUE), color = "black") +
   scale_fill_manual(name = "", 
-                    labels = c("$S_i$", "$S_{ij}$", "$S_{ijl}$"), 
+                    labels = c("$S_i$", "$S_{i,j}$", "$S_{i,j,l}$"), 
                     values = wes_palette("Cavalcanti1")) +
   scale_x_discrete(labels = c("Reference \n evapotranspiration", 
                               "Crop \n evapotranspiration", 
@@ -1644,7 +1644,7 @@ b <- all.ind[!sensitivity == "Ti", sum(original), .(et0.formulae, output, sensit
                    guide = guide_axis(n.dodge = 2)) +
   scale_y_continuous(breaks = pretty_breaks(n = 3)) +
   geom_hline(yintercept = 0.99, lty = 2) +
-  labs(x = "", y = "$\\sum S_i + \\sum S_{ij} + \\sum S_{ijl}$") +
+  labs(x = "", y = "$\\sum S_i + \\sum S_{i,j} + \\sum S_{i,j,l}$") +
   annotation_custom(textGrob("p", gp = gpar(col = "red")), 
                     xmin = 0.3, xmax = 1, ymin = 0.98, ymax = 0.98) +
   facet_wrap(~et0.formulae, labeller = as_labeller(facet_labels), ncol = 3) + 
