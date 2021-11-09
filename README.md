@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4940173.svg)](https://doi.org/10.5281/zenodo.4940173)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5658383.svg)](https://doi.org/10.5281/zenodo.5658383)
 
 # Models with higher effective dimensions tend to produce more uncertain estimates
 
