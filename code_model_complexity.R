@@ -1,8 +1,8 @@
-## ----setup, include=FALSE------------------------------------------------------------------------------------------
+## ----setup, include=FALSE-------------------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE, dev = "tikz")
 
 
-## ----packages, results="hide", message=FALSE, warning=FALSE--------------------------------------------------------
+## ----packages, results="hide", message=FALSE, warning=FALSE---------------------------
 
 # PRELIMINARY FUNCTIONS ----------------------------------------------------------
 
@@ -20,7 +20,7 @@ loadPackages <- function(x) {
 loadPackages(c(
   "data.table", "tidyverse", "parallel", "doParallel", "deSolve", 
   "sensobol", "crone", "KScorrect", "cowplot", "wesanderson", 
-  "Rfast", "RcppAlgos", "scales", "pracma", "grid"))
+  "Rfast", "RcppAlgos", "scales", "pracma", "grid", "benchmarkme"))
 
 # Create custom theme
 theme_AP <- function() {
@@ -44,7 +44,7 @@ checkpoint("2021-05-10",
            checkpointLocation = getwd())
 
 
-## ----psacoin model, cache=TRUE-------------------------------------------------------------------------------------
+## ----psacoin model, cache=TRUE--------------------------------------------------------
 
 # PSACOIN MODEL ------------------------------------------------------------------
 
@@ -121,7 +121,7 @@ psacoin0_fun <- function(R_0, X_B, K_DB, K_DG, D_G0, X_G,
 }
 
 
-## ----psacoin_settings, cache=TRUE----------------------------------------------------------------------------------
+## ----psacoin_settings, cache=TRUE-----------------------------------------------------
 
 # SETTINGS PSACOIN ---------------------------------------------------------------
 
@@ -134,7 +134,7 @@ total <- "azzini"
 n_cores <- detectCores() * 0.75
 
 
-## ----run_psacoin, cache=TRUE, dependson=c("psacoin_settings", "psacoin_model")-------------------------------------
+## ----run_psacoin, cache=TRUE, dependson=c("psacoin_settings", "psacoin_model")--------
 
 # RUN PSACOIN IN EACH COMPARTMENT ------------------------------------------------
 
@@ -219,7 +219,7 @@ y.bio <- psacoin0_fun(R_0 = mat[, "R_0"],
                       t = 10^7)
 
 
-## ----arrange_psacoin, cache=TRUE, dependson="run_psacoin"----------------------------------------------------------
+## ----arrange_psacoin, cache=TRUE, dependson="run_psacoin"-----------------------------
 
 # ARRANGE OUTPUT OF THE COMPARTMENTS ---------------------------------------------
 
@@ -234,7 +234,7 @@ A <- full.output %>%
   .[1:N]
 
 
-## ----psacoin_dynamics, cache=TRUE, dependson="psacoin_model"-------------------------------------------------------
+## ----psacoin_dynamics, cache=TRUE, dependson="psacoin_model"--------------------------
 
 # RUN MODEL DYNAMICS -----------------------------------------------------------
 
@@ -268,7 +268,7 @@ y <- mclapply(t, function(t)
   mc.cores = n_cores)
 
 
-## ----psacoin_output, cache=TRUE, dependson="psacoin_dynamics"------------------------------------------------------
+## ----psacoin_output, cache=TRUE, dependson="psacoin_dynamics"-------------------------
 
 # ARRANGE OUTPUT -----------------------------------------------------------------
 
@@ -287,7 +287,7 @@ out.plot <- rbindlist(out, idcol = "time") %>%
   .[time >= 10^1 & time <= 10^7]
 
 
-## ----plot_psacoin_dynamics, cache=TRUE, dependson="psacoin_output", fig.height=2, fig.width=5.5--------------------
+## ----plot_psacoin_dynamics, cache=TRUE, dependson="psacoin_output", fig.height=2, fig.width=5.5----
 
 # PLOT DYNAMICS PSACOIN ----------------------------------------------------------
 
@@ -302,7 +302,7 @@ plot.psacoin <- ggplot(out.plot, aes(time, V1, group = variable)) +
 plot.psacoin
 
 
-## ----psacoin_sensitivity, cache=TRUE, dependson=c("run_psacoin", "psacoin_model")----------------------------------
+## ----psacoin_sensitivity, cache=TRUE, dependson=c("run_psacoin", "psacoin_model")-----
 
 # SENSITIVITY ANALYSIS -----------------------------------------------------------
 
@@ -327,7 +327,7 @@ for(i in 2:4) {
 }
 
 
-## ----psacoin_arrange_sensitivity, cache=TRUE, dependson="psacoin_sensitivity"--------------------------------------
+## ----psacoin_arrange_sensitivity, cache=TRUE, dependson="psacoin_sensitivity"---------
 
 # ARRANGE DATA -------------------------------------------------------------------
 
@@ -355,7 +355,7 @@ psacoin.cv.kt <- merge(psacoin.cv, psacoin.kt, by = "variable") %>%
 print(psacoin.cv.kt)
 
 
-## ----psacoin_uncertain, cache=TRUE, dependson="arrange_psacoin", fig.height=2.5, fig.width=3-----------------------
+## ----psacoin_uncertain, cache=TRUE, dependson="arrange_psacoin", fig.height=2.5, fig.width=3----
 
 # PLOT PSACOIN CV ----------------------------------------------------------------
 
@@ -369,7 +369,7 @@ psacoin.cv.plot <- ggplot(psacoin.cv.kt, aes(variable, cv, group = 1)) +
   theme(legend.position = "none")
 
 
-## ----psacoin_plot_sensitivity, cache=TRUE, dependson="psacoin_arrange_sensitivity"---------------------------------
+## ----psacoin_plot_sensitivity, cache=TRUE, dependson="psacoin_arrange_sensitivity"----
 
 # PLOT ---------------------------------------------------------------------------
 
@@ -377,28 +377,31 @@ psacoin.ks.plot <- ind.psacoin[!sensitivity == "Ti"] %>%
   .[, sum(original), .(sensitivity, compartment)] %>%
   ggplot(., aes(compartment, V1, fill = sensitivity, order = sensitivity)) +
   geom_col(position = position_stack(reverse = TRUE), color = "black") +
-  labs(x = "", y = "$\\sum S_i + \\sum S_{ij} + \\sum S_{ijl}$") +
+  labs(x = "", y = "$\\sum S_i + \\sum S_{i,j} + \\sum S_{i,j,l}$") +
   scale_fill_manual(name = "Sensitivity", 
-                    labels = c("$S_i$", "$S_{ij}$", "$S_{ijl}$"), 
+                    labels = c("$S_i$", "$S_{i,j}$", "$S_{i,j,l}$"), 
                     values = wes_palette("Cavalcanti1")) +
   geom_hline(yintercept = 0.99, lty = 2) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
   theme_AP() +
   theme(legend.position = "none", 
-        axis.title.y = element_text(size = 8)) +
+        axis.title.y = element_text(size = 7)) +
   annotation_custom(textGrob("p", gp = gpar(col = "red")), 
                     xmin = 3.5, xmax = 3.5, ymin = 0.98, ymax = 0.98) 
 
 
-## ----psacoin_all_figures, cache=TRUE, dependson=c("psacoin_plot_sensitivity", "plot_psacoin_dynamics", "psacoin_uncertain"), fig.height=3.2, fig.width=5.5----
+## ----psacoin_all_figures, cache=TRUE, dependson=c("psacoin_plot_sensitivity", "plot_psacoin_dynamics", "psacoin_uncertain"), fig.height=3, fig.width=4.5----
 
 # PLOT ALL FIGURES PSACOIN -------------------------------------------------------
 
 psacoin.plots <- plot_grid(psacoin.cv.plot, 
                            psacoin.ks.plot, ncol = 2, labels = "auto")
 
+legend <- get_legend(psacoin.ks.plot + theme(legend.position = "top"))
+plot_grid(legend, psacoin.plots, rel_height = c(0.1, 0.9))
 
-## ----export_ind_psacoin, cache=TRUE, dependson="psacoin_sensitivity"-----------------------------------------------
+
+## ----export_ind_psacoin, cache=TRUE, dependson="psacoin_sensitivity"------------------
 
 # EXPORT PSACOIN SENSITIVITY INDICES ---------------------------------------------
 
@@ -406,7 +409,7 @@ fwrite(ind.psacoin, "ind.psacoin.csv")
 
 
 
-## ----bateman_equations, cache=TRUE---------------------------------------------------------------------------------
+## ----bateman_equations, cache=TRUE----------------------------------------------------
 
 # BATEMAN EQUATIONS --------------------------------------------------------------
 
@@ -428,7 +431,7 @@ bateman <- function(t, state, parameters) {
 
 
 
-## ----bateman_settings, cache=TRUE----------------------------------------------------------------------------------
+## ----bateman_settings, cache=TRUE-----------------------------------------------------
 
 # BATEMAN SETTINGS ---------------------------------------------------------------
 
@@ -441,7 +444,7 @@ params <- c(100, rep(0,  9))
 names(params) <- paste("x", 1:10, sep = "")
 
 
-## ----bateman_sample_matrix, cache=TRUE, dependson="bateman_settings"-----------------------------------------------
+## ----bateman_sample_matrix, cache=TRUE, dependson="bateman_settings"------------------
 
 # SAMPLE MATRIX ------------------------------------------------------------------
 
@@ -450,7 +453,7 @@ mat <- sensobol::sobol_matrices(matrices = "A", N = sample.size,
 mat <- apply(mat, 2, function(x) KScorrect::qlunif(x, 0.001, 10))
 
 
-## ----bateman_dynamics, cache=TRUE, dependson="bateman_sample_matrix"-----------------------------------------------
+## ----bateman_dynamics, cache=TRUE, dependson="bateman_sample_matrix"------------------
 
 # RUN DIFFERENTIAL EQUATIONS -----------------------------------------------------
 
@@ -460,7 +463,7 @@ Y <- data.table(ode(y = params,
                     parms = colMeans(mat)))
 
 
-## ----bateman_plot_dynamics, cache=TRUE, dependson="bateman_dynamics", fig.height=3, fig.width=4--------------------
+## ----bateman_plot_dynamics, cache=TRUE, dependson="bateman_dynamics", fig.height=3, fig.width=4----
 
 # PLOT BATEMAN DYNAMICS ----------------------------------------------------------
 
@@ -476,7 +479,7 @@ plot.bateman <- melt(Y, measure.vars = paste("x", 1:10, sep = "")) %>%
 plot.bateman
 
 
-## ----bateman_k, cache=TRUE-----------------------------------------------------------------------------------------
+## ----bateman_k, cache=TRUE------------------------------------------------------------
 
 # DEFINE BATEMAN EQUATIONS FOR K -------------------------------------------------
 
@@ -501,7 +504,7 @@ bateman_rowwise <- function(x1, mat, t) {
 }
 
 
-## ----bateman_settings2, cache=TRUE---------------------------------------------------------------------------------
+## ----bateman_settings2, cache=TRUE----------------------------------------------------
 
 # DEFINE SETTINGS ----------------------------------------------------------------
 
@@ -512,7 +515,7 @@ sample.size <- 2 ^ 15
 matrices <- "A"
 
 
-## ----bateman_parallel, cache=TRUE, dependson=c("bateman_settings2", "bateman_k")-----------------------------------
+## ----bateman_parallel, cache=TRUE, dependson=c("bateman_settings2", "bateman_k")------
 
 # RUN BATEMAN IN PARALLEL --------------------------------------------------------
 
@@ -536,7 +539,7 @@ y <- foreach(i = 1:length(k),
 stopCluster(cl)
 
 
-## ----bateman_output, cache=TRUE, dependson="bateman_parallel"------------------------------------------------------
+## ----bateman_output, cache=TRUE, dependson="bateman_parallel"-------------------------
 
 # ARRANGE OUTPUT -----------------------------------------------------------------
 
@@ -551,7 +554,7 @@ A <- dt[, .SD[1:(2 * sample.size)], k]
 dt.stat <- A[, .(cv = sd(V1, na.rm = TRUE) / mean(V1, na.rm = TRUE)), k]
 
 
-## ----bateman_cv, cache=TRUE, dependson="bateman_output"------------------------------------------------------------
+## ----bateman_cv, cache=TRUE, dependson="bateman_output"-------------------------------
 
 # COEFFICIENT OF VARIATION -------------------------------------------------------
 
@@ -564,7 +567,7 @@ cv.bateman <- ggplot(dt.stat, aes(k, cv)) +
 cv.bateman
 
 
-## ----bateman_sensitivity, cache=TRUE, dependson="bateman_k"--------------------------------------------------------
+## ----bateman_sensitivity, cache=TRUE, dependson="bateman_k"---------------------------
 
 # SENSITIVITY ANALYSIS -----------------------------------------------------------
 
@@ -600,7 +603,7 @@ ind.bateman <- foreach(i = 1:length(k),
 stopCluster(cl)
 
 
-## ----bateman_arrange_sensitivity, cache=TRUE, dependson="bateman_sensitivity"--------------------------------------
+## ----bateman_arrange_sensitivity, cache=TRUE, dependson="bateman_sensitivity"---------
 
 # ARRANGE BATEMAN SENSITIVITY ANALYSIS -------------------------------------------
 
@@ -613,7 +616,7 @@ names(out) <- k
 ind.bateman <- rbindlist(out, idcol = "dim") 
 
 
-## ----bateman_third, cache=TRUE, dependson="bateman_arrange_sensitivity", fig.height=2.5, fig.width=3---------------
+## ----bateman_third, cache=TRUE, dependson="bateman_arrange_sensitivity", fig.height=2.5, fig.width=3----
 
 # SUM UP TO THIRD-ORDER EFFECTS---------------------------------------------------
 
@@ -626,7 +629,7 @@ ind.bateman[!sensitivity == "Ti", sum(original), dim] %>%
   theme_AP() 
 
 
-## ----bateman_plot_sensitivity, cache=TRUE, dependson="bateman_arrange_sensitivity"---------------------------------
+## ----bateman_plot_sensitivity, cache=TRUE, dependson="bateman_arrange_sensitivity"----
 
 # PLOT BATEMAN CV ----------------------------------------------------------------
 
@@ -660,16 +663,16 @@ high.order.bateman <- ind.bateman[!sensitivity == "Ti"] %>%
   .[, dim:= as.numeric(dim)] %>%
   ggplot(., aes(dim, V1, fill = sensitivity)) +
   geom_col(position = position_stack(reverse = TRUE), color = "black") +
-  labs(x = "$k$", y = "$\\sum S_i + \\sum S_{ij} + \\sum S_{ijl}$") +
+  labs(x = "$k$", y = "$\\sum S_i + \\sum S_{i,j} + \\sum S_{i,j,l}$") +
   geom_hline(yintercept = 0.99, lty = 2) +
   scale_fill_manual(name = "", 
-                      labels = c("$S_i$", "$S_{ij}$", "$S_{ijl}$"), 
+                      labels = c("$S_i$", "$S_{i,j}$", "$S_{i,j,l}$"), 
                       values = wes_palette("Cavalcanti1")) +
   annotation_custom(textGrob("p", gp = gpar(col = "red")), 
                     xmin = 10.45, xmax = 10.45, ymin = 0.98, ymax = 0.98) +
   theme_AP() +
   theme(legend.position = "none", 
-        axis.title.y = element_text(size = 8))
+        axis.title.y = element_text(size = 7))
 
   
 high.order.bateman
@@ -696,14 +699,21 @@ all.plots <- plot_grid(psacoin.plots, bateman.plots, ncol = 1)
 plot_grid(all.legends, all.plots, ncol = 1, rel_heights = c(0.1, 0.8))
 
 
-## ----export_indices_bateman, cache=TRUE, dependson="bateman_sensitivity"-------------------------------------------
+## ----merge_only_psacoin, cache=TRUE, dependson="merge_psacoin_bateman", fig.height=2.8, fig.width=4----
+
+all.legends <- plot_grid(legend.kt, legend.ks, ncol = 1)
+plot_grid(all.legends, psacoin.plots, ncol = 1, rel_heights = c(0.2, 0.8))
+
+
+
+## ----export_indices_bateman, cache=TRUE, dependson="bateman_sensitivity"--------------
 
 # EXPORT BATEMAN SENSITIVITY INDICES ---------------------------------------------
 
 fwrite(ind.bateman, "ind.bateman.csv")
 
 
-## ----covid_dt, cache=TRUE------------------------------------------------------------------------------------------
+## ----covid_dt, cache=TRUE-------------------------------------------------------------
 
 # PRELIMINARIES ------------------------------------------------------------------
 
@@ -719,7 +729,7 @@ R0.list.shifted <- circshift(R0.list.a, -shift)
 R0.list <- rep(R0.list.shifted, length = length(times))
 
 
-## ----covid_models, cache=TRUE--------------------------------------------------------------------------------------
+## ----covid_models, cache=TRUE---------------------------------------------------------
 
 # COVID MODELS -------------------------------------------------------------------
 
@@ -802,7 +812,7 @@ sir_s_extended <- function(t, state, parameters) {
 }
 
 
-## ----merge_models_covid, cache=TRUE, dependson="covid_models"------------------------------------------------------
+## ----merge_models_covid, cache=TRUE, dependson="covid_models"-------------------------
 
 # MERGE ALL MODELS ---------------------------------------------------------------
 
@@ -811,7 +821,7 @@ type_model <- c("SIR(S)", "SIR(S)vaccination", "SIR(S)extended")
 names(covid_models) <- type_model
 
 
-## ----covid_states, cache=TRUE--------------------------------------------------------------------------------------
+## ----covid_states, cache=TRUE---------------------------------------------------------
 
 # INITIAL VALUES -----------------------------------------------------------------
 
@@ -837,7 +847,7 @@ all_y <- list(
 names(all_y) <- type_model
 
 
-## ----covid_parameters, cache=TRUE----------------------------------------------------------------------------------
+## ----covid_parameters, cache=TRUE-----------------------------------------------------
 
 # CONSTANTS ----------------------------------------------------------------------
 
@@ -856,7 +866,7 @@ epsilon1 <- epsilon2 <- 0.7 # Effect of vaccine 1 and 2; fixed
 # epsilon2 = U(0.7, 0.9) does not contribute output uncertainty)
 
 
-## ----settings_covid, cache=TRUE------------------------------------------------------------------------------------
+## ----settings_covid, cache=TRUE-------------------------------------------------------
 
 # DEFINE SETTINGS ----------------------------------------------------------------
 
@@ -868,7 +878,7 @@ total <- "azzini"
 R <- 10^3
 
 
-## ----covid_matrices, cache=TRUE, dependson=c("settings_covid", "covid_parameters")---------------------------------
+## ----covid_matrices, cache=TRUE, dependson=c("settings_covid", "covid_parameters")----
 
 # DEFINE MATRICES ----------------------------------------------------------------
 
@@ -928,7 +938,7 @@ all.mat <- lapply(all.mat, data.table) %>%
 names(all.mat) <- type_model
 
 
-## ----covid_dynamics, cache=TRUE, dependson=c("covid_matrices", "covid_parameters", "covid_states")-----------------
+## ----covid_dynamics, cache=TRUE, dependson=c("covid_matrices", "covid_parameters", "covid_states")----
 
 # RUN MODELS FOR DYNAMICS --------------------------------------------------------
 
@@ -941,7 +951,7 @@ for (i in names(covid_models)) {
 }
 
 
-## ----plot_covid_dynamics, cache=TRUE, dependson="covid_dynamics", fig.height=3, fig.width=5.5----------------------
+## ----plot_covid_dynamics, cache=TRUE, dependson="covid_dynamics", fig.height=3, fig.width=5.5----
 
 # PLOT DYNAMICS -----------------------------------------------------------------
 
@@ -971,7 +981,7 @@ dynamics.covid <- plot_grid(legend, bottom, ncol = 1, rel_heights = c(0.3, 0.7))
 dynamics.covid
 
 
-## ----covid_model_run, cache=TRUE, dependson=c("covid_matrices", "covid_parameters", "covid_states")----------------
+## ----covid_model_run, cache=TRUE, dependson=c("covid_matrices", "covid_parameters", "covid_states")----
 
 # RUN MODEL IN PARALLEL ---------------------------------------------------------
 
@@ -998,7 +1008,7 @@ y <- foreach(j = type_model) %:%
 stopCluster(n_cores)
 
 
-## ----arrange_covid, cache=TRUE, dependson="covid_model_run", cache.lazy=FALSE--------------------------------------
+## ----arrange_covid, cache=TRUE, dependson="covid_model_run", cache.lazy=FALSE---------
 
 # ARRANGE DATA --------------------------------------------------------------------
 
@@ -1021,7 +1031,7 @@ out <- rbindlist(dt.covid, idcol = "model") %>%
   .[, model:= factor(model, levels = type_model)] 
 
 
-## ----plot_covid_cv, cache=TRUE, dependson="arrange_covid", fig.height=2, fig.width=5.5-----------------------------
+## ----plot_covid_cv, cache=TRUE, dependson="arrange_covid", fig.height=2, fig.width=5.5----
 
 # PLOT CV -----------------------------------------------------------------------
 
@@ -1056,7 +1066,7 @@ plot_grid(dynamics.covid, cv.covid, labels = "auto", ncol = 1,
           rel_heights = c(0.55, 0.45))
 
 
-## ----covid_sensitivity, cache=TRUE, dependson="arrange_covid"------------------------------------------------------
+## ----covid_sensitivity, cache=TRUE, dependson="arrange_covid"-------------------------
 
 # SENSITIVITY ANALYSIS -----------------------------------------------------------
 
@@ -1089,7 +1099,7 @@ for(i in names(prove)) {
 }
 
 
-## ----covid_plot_indices, cache=TRUE, dependson="covid_sensitivity", fig.height=3, fig.width=5.5--------------------
+## ----covid_plot_indices, cache=TRUE, dependson="covid_sensitivity", fig.height=3, fig.width=5.5----
 
 # PLOT SENSITIVITY INDICES ---------------------------------------------------------
 
@@ -1111,7 +1121,7 @@ for(i in names(ind)) {
 plot.ind[[1]]
 
 
-## ----covid_plot_indices2, cache=TRUE, dependson="covid_sensitivity", fig.height=5.5, fig.width=5.5-----------------
+## ----covid_plot_indices2, cache=TRUE, dependson="covid_sensitivity", fig.height=5.5, fig.width=5.5----
 
 # PLOT SENSITIVITY INDICES ---------------------------------------------------------
 
@@ -1133,7 +1143,7 @@ for(i in names(ind)) {
 lapply(2:3, function(x) plot.ind[[x]])
 
 
-## ----export_sobol_covid, cache=TRUE, dependson="covid_sensitivity"-------------------------------------------------
+## ----export_sobol_covid, cache=TRUE, dependson="covid_sensitivity"--------------------
 
 # EXPORT SOBOL' INDICES COVID ----------------------------------------------------
 
@@ -1141,7 +1151,7 @@ covid.indices <- rbindlist(ind, idcol = "model")
 fwrite(covid.indices, "ind.covid.csv")
 
 
-## ----plot_covid_kt, cache=TRUE, dependson="export_sobol_covid", fig.height=2, fig.width=5--------------------------
+## ----plot_covid_kt, cache=TRUE, dependson="export_sobol_covid", fig.height=2, fig.width=5----
 
 # PLOT COVID KT ------------------------------------------------------------------
 
@@ -1166,7 +1176,7 @@ plot.covid.kt <- plot_grid(legend.covid.kt, covid.kt, ncol = 1, rel_heights = c(
 plot.covid.kt
 
 
-## ----merge_cv_kt_covid, cache=TRUE, dependson=c("plot_covid_kt", "plot_covid_cv"), fig.height=4, fig.width=5-------
+## ----merge_cv_kt_covid, cache=TRUE, dependson=c("plot_covid_kt", "plot_covid_cv"), fig.height=4, fig.width=5----
 
 # PLOT COVID CV AND COVID KT -----------------------------------------------------
 
@@ -1192,7 +1202,7 @@ covid.indices %>%
   theme(legend.position = "top") 
 
 
-## ----bar_covid_sum, cache=TRUE, dependson="covid_sensitivity", fig.height=2.5, fig.width=4.5-----------------------
+## ----bar_covid_sum, cache=TRUE, dependson="covid_sensitivity", fig.height=2.5, fig.width=4.5----
 
 # PLOT SUM OF SI, SIJ AND SIJL AT T = 200 ----------------------------------------
 
@@ -1206,10 +1216,10 @@ covid.ks <-
   .[, model:= factor(model, levels = type_model)] %>%
   ggplot(., aes(variable, V1, fill = sensitivity)) +
   geom_col(position = position_stack(reverse = TRUE), color = "black") +
-  labs(x = "", y = "$\\sum S_i + \\sum S_{ij} + \\sum S_{ijl}$") +
+  labs(x = "", y = "$\\sum S_i + \\sum S_{i,j} + \\sum S_{i,j,l}$") +
   geom_hline(yintercept = 0.99, lty = 2) +
   scale_fill_manual(name = "", 
-                    labels = c("$S_i$", "$S_{ij}$", "$S_{ijl}$"), 
+                    labels = c("$S_i$", "$S_{i,j}$", "$S_{i,j,l}$"), 
                     values = wes_palette("Cavalcanti1")) +
   annotation_custom(textGrob("p", gp = gpar(col = "red")), 
                     xmin = 1, xmax = 1, ymin = 0.98, ymax = 0.98) +
@@ -1236,7 +1246,165 @@ plot_grid(covid.cv.kt, covid.ks, ncol = 1,
           labels = c("", "c"), rel_heights = c(0.6, 0.4))
 
 
-## ----water_models, cache=TRUE--------------------------------------------------------------------------------------
+## ----get_plot_simulations, cache=TRUE-------------------------------------------------
+
+# DEFINE SETTINGS ----------------------------------------------------------------
+
+sample.size <- 2^7
+matrices <- c("A", "B", "AB", "BA")
+order <- "third"
+first <- "azzini"
+total <- "azzini"
+R <- 10^3
+
+# DEFINE MATRICES ----------------------------------------------------------------
+
+# SIR(S) with seasonality
+#--------------------------------------
+params <- c("epsilon", "alpha")
+# order = second because there are only two uncertain parameters
+mat1 <- sobol_matrices(N = sample.size, params = params, scrambling = 1,
+                      matrices = matrices, order = "second") 
+
+mat1[, "epsilon"] <- qunif(mat1[, "epsilon"], 0.4, 1)
+mat1[, "alpha"] <- qunif(mat1[, "alpha"], 0.8, 1)
+
+mat.dt1 <- data.table(mat1)[, `:=` (alpha1 = alpha, alpha2 = alpha, alphaV = alpha)]
+mat.dt1 <- cbind(mat.dt1, gamma, delta, mu, epsilonV1, epsilonV2, omega)
+
+# SIR(S) with vaccination
+#--------------------------------------
+# params <- c("epsilon", "alpha", "nu", "delta_vax", "tvax")
+params <- c("epsilon", "alpha", "nu", "tvax")
+mat2 <- sobol_matrices(N = sample.size, params = params, scrambling = 1,
+                       matrices = matrices, order = order)
+
+mat2[, "epsilon"] <- qunif(mat2[, "epsilon"], 0.4, 1)
+mat2[, "alpha"] <- qunif(mat2[, "alpha"], 0.8, 1)
+mat2[, "nu"] <- qunif(mat2[, "nu"], 0.001, 0.009)
+# mat2[, "delta_vax"] <- qunif(mat2[, "delta_vax"], 0.5, 2)
+mat2[, "tvax"] <- floor(qunif(mat2[, "tvax"], 48, 78))
+
+mat.dt2 <- data.table(mat2)[, `:=` (alpha1 = alpha, alpha2 = alpha, alphaV = alpha)]
+mat.dt2 <- cbind(mat.dt2, gamma, delta, mu, epsilonV1, epsilonV2, omega)
+
+# SIR(S) extended
+#--------------------------------------
+# params <- c("epsilon", "alpha", "nu", "delta_vax", "tvax", "epsilon1", "epsilon2")
+params <- c("epsilon", "alpha", "nu", "tvax")
+mat <- sobol_matrices(N = sample.size, params = params, scrambling = 1,
+                      matrices = matrices, order = order)
+
+mat[, "epsilon"] <- qunif(mat[, "epsilon"], 0.4, 1)
+mat[, "alpha"] <- qunif(mat[, "alpha"], 0.8, 1)
+mat[, "nu"] <- qunif(mat[, "nu"], 0.001, 0.009)
+# mat[, "delta_vax"] <- qunif(mat[, "delta_vax"], 0.5, 2)
+mat[, "tvax"] <- floor(qunif(mat[, "tvax"], 48, 78))
+# mat[, "epsilon1"] <- qunif(mat[, "epsilon1"], 0.5, 0.9)
+# mat[, "epsilon2"] <- qunif(mat[, "epsilon2"], 0.5, 0.7)
+
+# MERGE ALL MATRICES --------------------
+
+all.mat <- list(mat1, mat2, mat)
+all.mat <- lapply(all.mat, data.table) %>%
+  lapply(., function(x) 
+    x[, `:=` (alpha1 = alpha, alpha2 = alpha, alphaV = alpha)]) %>%
+  lapply(., function(x) cbind(x, gamma, delta, mu, epsilonV1, epsilonV2, omega, 
+                              delta_vax, epsilon1, epsilon2))
+
+names(all.mat) <- type_model
+
+# RUN MODELS FOR DYNAMICS --------------------------------------------------------
+
+out <- list()
+for (i in names(covid_models)) {
+  out[[i]] <- data.table(ode(y = all_y[[i]],
+                             times = times,
+                             func = covid_models[[i]],
+                             parms = colMeans(all.mat[[i]])))
+}
+
+# RUN MODEL IN PARALLEL ---------------------------------------------------------
+
+# Define parallel computing
+n_cores <- makeCluster(floor(detectCores() * 0.75))
+registerDoParallel(n_cores)
+
+y <- foreach(j = type_model) %:%
+  foreach(i = 1:nrow(all.mat[[j]]), .combine = "rbind", 
+          .packages = "deSolve") %dopar%
+  {
+    .GlobalEnv$R0.list <- R0.list
+    .GlobalEnv$N <- N
+    .GlobalEnv$d <- d
+    .GlobalEnv$rho1 <- rho1
+    .GlobalEnv$rho2 <- rho2
+    ode(y = all_y[[j]], 
+        times = times,
+        func = covid_models[[j]], 
+        parms = all.mat[[j]][i, ])
+  }
+
+# Stop clusters
+stopCluster(n_cores)
+
+# ARRANGE DATA ----------------------------------------------------------------
+
+mean.covid <- lapply(out, function(x) 
+  melt(x, measure.vars = colnames(x)[-1])) %>%
+  rbindlist(., idcol = "Model") %>%
+  .[, Model:= factor(Model, levels = type_model)] %>%
+  .[, simulations:= "R261"] %>%
+  .[, type:= "Mean"]
+
+dad.covid <- lapply(y, function(x) data.table(x))
+names(dad.covid) <- type_model
+multiple_sim <- lapply(dad.covid, function(x)
+         x[, .SD[1:((sample.size * 2) * length(times))]]) %>%
+  lapply(., function(x) x[, simulations:= factor(paste("R", rep(1:260, each = sample.size * 2), sep = ""))]) %>%
+  lapply(., function(x) melt(x, measure.vars = 2:(ncol(x) - 1))) %>%
+  rbindlist(., idcol = "Model") %>%
+  .[, Model:= factor(Model, levels = type_model)] %>%
+  .[, type:= "Simulations"] %>%
+  setcolorder(., c("Model", "time", "variable", "value", "simulations", "type"))
+
+
+## ----plot, cache=TRUE, dependson="get_plot_simulations", fig.height=2.5, fig.width=4.5, dev="pdf"----
+
+mean_and_multiple <- rbind(mean.covid, multiple_sim) %>%
+  ggplot(., aes(time, value, color = variable, 
+                group = interaction(simulations, variable), 
+                size = type, 
+                alpha = type)) +
+  geom_line() +
+  facet_wrap(~Model) +
+  labs(x = "t", y = "N") +
+  scale_size_manual(values = c(1.2, 0.05)) +
+  scale_color_discrete(name = "Variable", 
+                       labels = c(expression(S[P]), expression(I[P]), 
+                                  expression(R), expression(S[S]),
+                                  expression(I[S]), expression(V), 
+                                  expression(V[1]), expression(V[2]), 
+                                  expression(I[V]), expression(S[S1]), 
+                                  expression(S[S2]), expression(I[S1]), 
+                                  expression(I[S2]))) +
+  scale_alpha_discrete(range = c(1, 0.2)) +
+  theme_AP() +
+  theme(legend.position = "none") +
+  guides(size = "none", alpha = "none")
+
+
+legend <- get_legend(mean_and_multiple + 
+                       theme(legend.position = "top", 
+                             legend.text = element_text(
+                               margin = margin(unit = "pt"))) + 
+                       guides(color = guide_legend(nrow = 3, byrow=TRUE)))
+
+plot_grid(legend, mean_and_multiple, ncol = 1, rel_heights = c(0.3, 0.7))
+
+
+
+## ----water_models, cache=TRUE---------------------------------------------------------
 
 # DEFINE THE MODELS --------------------------------------------------------------
 
@@ -1262,7 +1430,7 @@ run_model <- function(trigger, output, mat) {
   } else if(output == "water") {
     final <- (mat[, "I_a"] * (mat[, "k_c"] * et0 - mat[, "P"])) / 
       (mat[, "E_a"] * mat[, "E_c"] * mat[, "M_f"])
-    final <- final / 10^3 # Output is in m3 ha
+    final <- final * 10 #from mm to m3 ha
   }
   
   return(final)
@@ -1293,7 +1461,7 @@ run_model_rowwise <- function(I_a, Delta, A, gamma, T_a, w, v, output,
   } else if(output == "etc") {
     final <- crop.reference
   } else if(output == "water") {
-    final <- water.withdrawal / 10^3 # Output is in m3 ha
+    final <- water.withdrawal * 10 #from mm to m3 ha
   }
   return(final)
 }
@@ -1392,7 +1560,7 @@ full_model <- function(trigger, output) {
 }
 
 
-## ----water_settings, cache=TRUE------------------------------------------------------------------------------------
+## ----water_settings, cache=TRUE-------------------------------------------------------
 
 # DEFINE SETTINGS ----------------------------------------------------------------
 
@@ -1404,7 +1572,7 @@ total <- "jansen"
 R <- 10^3
 
 
-## ----run_water1, cache=TRUE, dependson=c("water_models", "water_settings")-----------------------------------------
+## ----run_water1, cache=TRUE, dependson=c("water_models", "water_settings")------------
 
 # RUN MODELS ---------------------------------------------------------------------
 
@@ -1426,7 +1594,7 @@ y <- foreach(j = et0.formulae) %:%
 stopCluster(n_cores)
 
 
-## ----run_water2, cache=TRUE, dependson=c("water_models", "water_settings")-----------------------------------------
+## ----run_water2, cache=TRUE, dependson=c("water_models", "water_settings")------------
 
 # RUN MODELS (all) ---------------------------------------------------------------
 trigger <- "all"
@@ -1463,7 +1631,7 @@ y.all <- foreach(j = c("et0", "etc", "water")) %:%
 stopCluster(n_cores)
 
 
-## ----water_arrange, cache=TRUE, dependson=c("run_water2", "run_water1")--------------------------------------------
+## ----water_arrange, cache=TRUE, dependson=c("run_water2", "run_water1")---------------
 
 # ARRANGE RESULTS ----------------------------------------------------------------
 
@@ -1475,7 +1643,7 @@ names(y) <- et0.formulae
 names(y.all) <- outputs
 
 
-## ----water_A_matrix, cache=TRUE, dependson="water_arrange"---------------------------------------------------------
+## ----water_A_matrix, cache=TRUE, dependson="water_arrange"----------------------------
 
 # CREATION OF THE A MATRIX -------------------------------------------------------
 
@@ -1502,7 +1670,7 @@ A.all <- out.all[, .SD[1:(sample.size * 2)], output]
 A.water <- rbind(A, A.all)
 
 
-## ----water_sensitivity, cache=TRUE, dependson="water_A_matrix"-----------------------------------------------------
+## ----water_sensitivity, cache=TRUE, dependson="water_A_matrix"------------------------
 
 # SENSITIVITY ANALYSIS --------------------------------------------------
 
@@ -1535,7 +1703,7 @@ ind.all <- out.all[, sobol_indices(matrices = matrices,
                                    first = first, total = total)$results, .(et0.formulae, output)]
 
 
-## ----water_arrange_sensitivities, cache=TRUE, dependson="water_sensitivity"----------------------------------------
+## ----water_arrange_sensitivities, cache=TRUE, dependson="water_sensitivity"-----------
 
 # ARRANGE SENSITIVITY DATA ---------------------------------------------
 
@@ -1546,9 +1714,9 @@ ind.dt <- lapply(ind, function(x) rbindlist(x, idcol = "output")) %>%
 all.ind <- rbind(ind.dt, ind.all)[, original:= ifelse(original < 0, 0, original)]
 
 
-## ----water_plots, cache=TRUE, dependson="water_arrange_sensitivities", fig.height=5.9, fig.width=5.5---------------
+## ----water_plots, cache=TRUE, dependson="water_arrange_sensitivities", fig.height=4, fig.width=5.5----
 
-# CREATE PLOTS --------------------------------------------------------
+# CREATE PLOTS -------------------------------------------------------
 
 water.kt <- all.ind[sensitivity == "Ti" & original > 0.05] %>%
   .[, .(kt = length(unique(parameters))), .(et0.formulae, output)]
@@ -1576,7 +1744,9 @@ a <- merge(water.kt, water.cv, by = c("et0.formulae", "output")) %>%
                               "Irrigation \n water withdrawal"), 
                    guide = guide_axis(n.dodge = 2)) +
   labs(x = "", y = "CV") +
-  theme_AP()
+  theme_AP() +
+  theme(legend.position = c(0.35, 0.55), 
+        legend.box = "vertical") 
 
 # ks plots 
 
@@ -1602,25 +1772,26 @@ b <- all.ind[!sensitivity == "Ti", sum(original), .(et0.formulae, output, sensit
   labs(x = "", y = "$\\sum S_i + \\sum S_{ij} + \\sum S_{ijl}$") +
   annotation_custom(textGrob("p", gp = gpar(col = "red")), 
                     xmin = 0.3, xmax = 1, ymin = 0.98, ymax = 0.98) +
-  facet_wrap(~et0.formulae, labeller = as_labeller(facet_labels), ncol = 3) + 
+  facet_wrap(~et0.formulae, labeller = as_labeller(facet_labels), ncol = 1) + 
   theme_AP() +
-  theme(legend.position = "top", 
-        panel.spacing = unit(2, "lines"), 
-        axis.text.x = element_text(size = 7))
+  theme(legend.position = "none", 
+        axis.text.x = element_text(size = 9))
 
-plot_grid(a, b, ncol = 1, labels = "auto")
+legend <- get_legend(b + theme(legend.position = "top"))
+bottom <- plot_grid(a, b, ncol = 2, labels = "auto", rel_widths = c(0.52, 0.48))
+plot_grid(legend, bottom, ncol = 1, rel_heights = c(0.1, 0.9))
 
 all.ind[!sensitivity == "Ti", round(sum(original), 3), .(et0.formulae, output, sensitivity)]
 
 
-## ----export_water_sensitivity, cache=TRUE, dependson="water_arrange_sensitivities"---------------------------------
+## ----export_water_sensitivity, cache=TRUE, dependson="water_arrange_sensitivities"----
 
 # EXPORT WATER SENSITIVITY INDICES -----------------------------------------------
 
 fwrite(all.ind, "ind.water.csv")
 
 
-## ----sobol_models, cache=TRUE--------------------------------------------------------------------------------------
+## ----sobol_models, cache=TRUE---------------------------------------------------------
 
 # DEFINE MODELS -----------------------------------------------------------------
 
@@ -1667,12 +1838,12 @@ model_g <- function(N, k, epsilon, order) {
   sum.si <- ind$si.sum
   k.t <- ind$results[sensitivity == "Ti" & original > 0.05, length(unique(parameters))]
   Sij <- ind$results[sensitivity == "Sij", sum(original)]
-  Sijk <- ind$results[sensitivity == "Sijk", sum(original)]
-  return(c(cv, sum.si, k.t, Sij, Sijk, mae))
+  Sijl <- ind$results[sensitivity == "Sijl", sum(original)]
+  return(c(cv, sum.si, k.t, Sij, Sijl, mae))
 }
 
 
-## ----sobol_matrix, cache=TRUE--------------------------------------------------------------------------------------
+## ----sobol_matrix, cache=TRUE---------------------------------------------------------
 
 # DEFINE SETTINGS ----------------------------------------------------------------
 
@@ -1696,7 +1867,7 @@ mat[, "k"] <- floor(mat[, "k"] * (max.k - 3 + 1) + 3)
 mat[, "epsilon"] <- floor(mat[, "epsilon"] * (N - 1 + 1) + 1)
 
 
-## ----sobol_model, cache=TRUE, dependson=c("sobol_matrix", "sobol_models")------------------------------------------
+## ----sobol_model, cache=TRUE, dependson=c("sobol_matrix", "sobol_models")-------------
 
 # RUN SOBOL' G MODEL -------------------------------------------------------------
 
@@ -1719,25 +1890,25 @@ Y <- foreach(i=1:nrow(mat), .packages = "sensobol",
 stopCluster(cl)
 
 
-## ----arrange_sobol_data, cache=TRUE, dependson="sobol_model"-------------------------------------------------------
+## ----arrange_sobol_data, cache=TRUE, dependson="sobol_model"--------------------------
 
 # ARRANGE SOBOL' G DATA ----------------------------------------------------------
 
 dt <- data.table(Y) %>%
   setnames(., paste("V", 1:7, sep = ""), 
-           c("CV", "sum.si", "k.t", "sij", "sijk", "mae.si", "mae.ti")) %>%
+           c("CV", "sum.si", "k.t", "sij", "sijl", "mae.si", "mae.ti")) %>%
   cbind(mat, .) %>%
   .[, k.s:= ifelse(sum.si >= 0.99, 1,
                    ifelse(sum.si + sij >= 0.99, 2, 
-                          ifelse((sum.si + sij + sijk) >= 0.99, 3, 4)))] %>%
+                          ifelse((sum.si + sij + sijl) >= 0.99, 3, 4)))] %>%
   .[, k.s:= factor(k.s)] %>%
   .[, up.second:= sum.si + sij] %>%
-  .[, up.third:= sum.si + sij + sijk]
+  .[, up.third:= sum.si + sij + sijl]
 
 fwrite(dt, "dt.sobol.csv")
 
 
-## ----plot_sobol_data, cache=TRUE, dependson="arrange_sobol_data", fig.height=3, fig.width=4------------------------
+## ----plot_sobol_data, cache=TRUE, dependson="arrange_sobol_data", fig.height=3, fig.width=4----
 
 # PLOT ---------------------------------------------------------------------------
 
@@ -1748,12 +1919,14 @@ sobolg.plot <- ggplot(dt, aes(k.t, CV, color = sum.si, shape = k.s)) +
                        name = "$\\sum_{i=1}^{k} S_i$") +
   scale_shape_discrete(name = "$k_s$", 
                        labels = c("1", "2", "3", "$\\geq 4$")) +
+  geom_rect(aes(xmin = 1.8, xmax = 5.2, ymin = 0.6, ymax = 1), color = "black", 
+            size = 0.5, fill = NA) +
   theme_AP()
 
 sobolg.plot
 
 
-## ----settings_meta, cache=TRUE-------------------------------------------------------------------------------------
+## ----settings_meta, cache=TRUE--------------------------------------------------------
 
 # DEFINE SETTINGS ----------------------------------------------------------------
 
@@ -1776,7 +1949,7 @@ mat[, "n"] <- sapply(mat[, "k"], function(x) sample(2:x, 1))
 mat[, "n"] <- ifelse(mat[, "n"] == 1, 2, mat[, "n"]) # Correct and force 1 to be 2
 
 
-## ----plot_functions_metafunction, cache=TRUE, fig.width=5.5, fig.height=3.3----------------------------------------
+## ----plot_functions_metafunction, cache=TRUE, fig.width=5.5, fig.height=3.3-----------
 
 # PLOT METAFUNCTION -----------------------------------------------------------------
 
@@ -1826,7 +1999,7 @@ plot.metafunction <- ggplot(data.frame(x = runif(100)), aes(x)) +
 plot.metafunction
 
 
-## ----model_metafunction, cache=TRUE--------------------------------------------------------------------------------
+## ----model_metafunction, cache=TRUE---------------------------------------------------
 
 # DEFINE MODEL ---------------------------------------------------------------------
 
@@ -1905,7 +2078,7 @@ model_fun <- function(k, epsilon, N, n) {
 }
 
 
-## ----run_metafunction, cache=TRUE, dependson=c("model_metafunction", "settings_meta")------------------------------
+## ----run_metafunction, cache=TRUE, dependson=c("model_metafunction", "settings_meta")----
 
 # RUN MODEL -------------------------------------------------------------------------
 
@@ -1943,7 +2116,7 @@ Y.k <- foreach(i=1:nrow(mat), .packages = c("Rfast", "sensobol", "dplyr", "RcppA
 stopCluster(cl)
 
 
-## ----arrange_meta, cache=TRUE, dependson="run_metafunction"--------------------------------------------------------
+## ----arrange_meta, cache=TRUE, dependson="run_metafunction"---------------------------
 
 # ARRANGE MODEL OUTPUT ---------------------------------------------------------------
 
@@ -1964,7 +2137,7 @@ fwrite(dt, "dt.csv")
 fwrite(dt.k, "dt.k.csv")
 
 
-## ----cv_meta, cache=TRUE, dependson="arrange_meta", fig.height=3, fig.width=4--------------------------------------
+## ----cv_meta, cache=TRUE, dependson="arrange_meta", fig.height=3, fig.width=4---------
 
 # PLOTS --------------------------------------------------------------------------
 
@@ -1992,7 +2165,7 @@ a
 b
 
 
-## ----merge_plots_cv, cache=TRUE, dependson="cv_meta", fig.height=3, fig.width=4.4----------------------------------
+## ----merge_plots_cv, cache=TRUE, dependson="cv_meta", fig.height=3, fig.width=4.4-----
 
 # MERGE PLOTS --------------------------------------------------------------------
 
@@ -2010,8 +2183,31 @@ plot_grid(sobolg.plot, meta.plot, ncol = 1, labels = c("a", ""),
           rel_heights = c(0.6, 0.4))
 
 
-## ----new_sobol_g, cache=TRUE, dependson="plot_sobol_data", fig.height=7, fig.width=5.5-----------------------------
+## ----new_sobol_g, cache=TRUE, dependson="plot_sobol_data", fig.height=7, fig.width=5.5----
 
 plot_grid(plot.metafunction, meta.plot, rel_heights = c(0.65, 0.35), 
           rel_widths = c(0.7, 0.3), ncol = 1)
+
+
+## ----plot_metafunction, cache=TRUE, dependson=c("merge_plots_cv"), fig.width = 4.7, fig.height = 2.5----
+
+bottom <- plot_grid(a, b, ncol = 2, labels = c("a", "b"))
+meta.plot <- plot_grid(legend, bottom, ncol = 1, rel_heights = c(0.1, 0.9))
+meta.plot
+
+
+## ----system---------------------------------------------------------------------------
+
+# SESSION INFORMATION -----------------------------------------------------------
+
+sessionInfo()
+
+## Return the machine CPU
+cat("Machine:     "); print(get_cpu()$model_name)
+
+## Return number of true cores
+cat("Num cores:   "); print(detectCores(logical = FALSE))
+
+## Return number of threads
+cat("Num threads: "); print(detectCores(logical = FALSE))
 

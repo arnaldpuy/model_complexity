@@ -52,7 +52,7 @@ loadPackages <- function(x) {
 loadPackages(c(
   "data.table", "tidyverse", "parallel", "doParallel", "deSolve", 
   "sensobol", "crone", "KScorrect", "cowplot", "wesanderson", 
-  "Rfast", "RcppAlgos", "scales", "pracma", "grid"))
+  "Rfast", "RcppAlgos", "scales", "pracma", "grid", "benchmarkme"))
 
 # Create custom theme
 theme_AP <- function() {
@@ -426,12 +426,15 @@ psacoin.ks.plot <- ind.psacoin[!sensitivity == "Ti"] %>%
                     xmin = 3.5, xmax = 3.5, ymin = 0.98, ymax = 0.98) 
 ```
 
-```{r psacoin_all_figures, cache=TRUE, dependson=c("psacoin_plot_sensitivity", "plot_psacoin_dynamics", "psacoin_uncertain"), fig.height=3.2, fig.width=5.5}
+```{r psacoin_all_figures, cache=TRUE, dependson=c("psacoin_plot_sensitivity", "plot_psacoin_dynamics", "psacoin_uncertain"), fig.height=3, fig.width=4.5}
 
 # PLOT ALL FIGURES PSACOIN -------------------------------------------------------
 
 psacoin.plots <- plot_grid(psacoin.cv.plot, 
                            psacoin.ks.plot, ncol = 2, labels = "auto")
+
+legend <- get_legend(psacoin.ks.plot + theme(legend.position = "top"))
+plot_grid(legend, psacoin.plots, rel_height = c(0.1, 0.9))
 ```
 
 ```{r export_ind_psacoin, cache=TRUE, dependson="psacoin_sensitivity"}
@@ -733,6 +736,13 @@ bateman.plots <- plot_grid(bateman.cv.plot, high.order.bateman,
 all.legends <- plot_grid(legend.kt, legend.ks, ncol = 2)
 all.plots <- plot_grid(psacoin.plots, bateman.plots, ncol = 1)
 plot_grid(all.legends, all.plots, ncol = 1, rel_heights = c(0.1, 0.8))
+```
+
+```{r merge_only_psacoin, cache=TRUE, dependson="merge_psacoin_bateman", fig.height=2.8, fig.width=4}
+
+all.legends <- plot_grid(legend.kt, legend.ks, ncol = 1)
+plot_grid(all.legends, psacoin.plots, ncol = 1, rel_heights = c(0.2, 0.8))
+
 ```
 
 ```{r export_indices_bateman, cache=TRUE, dependson="bateman_sensitivity"}
@@ -1278,6 +1288,163 @@ plot_grid(covid.cv.kt, covid.ks, ncol = 1,
           labels = c("", "c"), rel_heights = c(0.6, 0.4))
 ```
 
+```{r get_plot_simulations, cache=TRUE}
+
+# DEFINE SETTINGS ----------------------------------------------------------------
+
+sample.size <- 2^7
+matrices <- c("A", "B", "AB", "BA")
+order <- "third"
+first <- "azzini"
+total <- "azzini"
+R <- 10^3
+
+# DEFINE MATRICES ----------------------------------------------------------------
+
+# SIR(S) with seasonality
+#--------------------------------------
+params <- c("epsilon", "alpha")
+# order = second because there are only two uncertain parameters
+mat1 <- sobol_matrices(N = sample.size, params = params, scrambling = 1,
+                      matrices = matrices, order = "second") 
+
+mat1[, "epsilon"] <- qunif(mat1[, "epsilon"], 0.4, 1)
+mat1[, "alpha"] <- qunif(mat1[, "alpha"], 0.8, 1)
+
+mat.dt1 <- data.table(mat1)[, `:=` (alpha1 = alpha, alpha2 = alpha, alphaV = alpha)]
+mat.dt1 <- cbind(mat.dt1, gamma, delta, mu, epsilonV1, epsilonV2, omega)
+
+# SIR(S) with vaccination
+#--------------------------------------
+# params <- c("epsilon", "alpha", "nu", "delta_vax", "tvax")
+params <- c("epsilon", "alpha", "nu", "tvax")
+mat2 <- sobol_matrices(N = sample.size, params = params, scrambling = 1,
+                       matrices = matrices, order = order)
+
+mat2[, "epsilon"] <- qunif(mat2[, "epsilon"], 0.4, 1)
+mat2[, "alpha"] <- qunif(mat2[, "alpha"], 0.8, 1)
+mat2[, "nu"] <- qunif(mat2[, "nu"], 0.001, 0.009)
+# mat2[, "delta_vax"] <- qunif(mat2[, "delta_vax"], 0.5, 2)
+mat2[, "tvax"] <- floor(qunif(mat2[, "tvax"], 48, 78))
+
+mat.dt2 <- data.table(mat2)[, `:=` (alpha1 = alpha, alpha2 = alpha, alphaV = alpha)]
+mat.dt2 <- cbind(mat.dt2, gamma, delta, mu, epsilonV1, epsilonV2, omega)
+
+# SIR(S) extended
+#--------------------------------------
+# params <- c("epsilon", "alpha", "nu", "delta_vax", "tvax", "epsilon1", "epsilon2")
+params <- c("epsilon", "alpha", "nu", "tvax")
+mat <- sobol_matrices(N = sample.size, params = params, scrambling = 1,
+                      matrices = matrices, order = order)
+
+mat[, "epsilon"] <- qunif(mat[, "epsilon"], 0.4, 1)
+mat[, "alpha"] <- qunif(mat[, "alpha"], 0.8, 1)
+mat[, "nu"] <- qunif(mat[, "nu"], 0.001, 0.009)
+# mat[, "delta_vax"] <- qunif(mat[, "delta_vax"], 0.5, 2)
+mat[, "tvax"] <- floor(qunif(mat[, "tvax"], 48, 78))
+# mat[, "epsilon1"] <- qunif(mat[, "epsilon1"], 0.5, 0.9)
+# mat[, "epsilon2"] <- qunif(mat[, "epsilon2"], 0.5, 0.7)
+
+# MERGE ALL MATRICES --------------------
+
+all.mat <- list(mat1, mat2, mat)
+all.mat <- lapply(all.mat, data.table) %>%
+  lapply(., function(x) 
+    x[, `:=` (alpha1 = alpha, alpha2 = alpha, alphaV = alpha)]) %>%
+  lapply(., function(x) cbind(x, gamma, delta, mu, epsilonV1, epsilonV2, omega, 
+                              delta_vax, epsilon1, epsilon2))
+
+names(all.mat) <- type_model
+
+# RUN MODELS FOR DYNAMICS --------------------------------------------------------
+
+out <- list()
+for (i in names(covid_models)) {
+  out[[i]] <- data.table(ode(y = all_y[[i]],
+                             times = times,
+                             func = covid_models[[i]],
+                             parms = colMeans(all.mat[[i]])))
+}
+
+# RUN MODEL IN PARALLEL ---------------------------------------------------------
+
+# Define parallel computing
+n_cores <- makeCluster(floor(detectCores() * 0.75))
+registerDoParallel(n_cores)
+
+y <- foreach(j = type_model) %:%
+  foreach(i = 1:nrow(all.mat[[j]]), .combine = "rbind", 
+          .packages = "deSolve") %dopar%
+  {
+    .GlobalEnv$R0.list <- R0.list
+    .GlobalEnv$N <- N
+    .GlobalEnv$d <- d
+    .GlobalEnv$rho1 <- rho1
+    .GlobalEnv$rho2 <- rho2
+    ode(y = all_y[[j]], 
+        times = times,
+        func = covid_models[[j]], 
+        parms = all.mat[[j]][i, ])
+  }
+
+# Stop clusters
+stopCluster(n_cores)
+
+# ARRANGE DATA ----------------------------------------------------------------
+
+mean.covid <- lapply(out, function(x) 
+  melt(x, measure.vars = colnames(x)[-1])) %>%
+  rbindlist(., idcol = "Model") %>%
+  .[, Model:= factor(Model, levels = type_model)] %>%
+  .[, simulations:= "R261"] %>%
+  .[, type:= "Mean"]
+
+dad.covid <- lapply(y, function(x) data.table(x))
+names(dad.covid) <- type_model
+multiple_sim <- lapply(dad.covid, function(x)
+         x[, .SD[1:((sample.size * 2) * length(times))]]) %>%
+  lapply(., function(x) x[, simulations:= factor(paste("R", rep(1:260, each = sample.size * 2), sep = ""))]) %>%
+  lapply(., function(x) melt(x, measure.vars = 2:(ncol(x) - 1))) %>%
+  rbindlist(., idcol = "Model") %>%
+  .[, Model:= factor(Model, levels = type_model)] %>%
+  .[, type:= "Simulations"] %>%
+  setcolorder(., c("Model", "time", "variable", "value", "simulations", "type"))
+```
+
+```{r plot, cache=TRUE, dependson="get_plot_simulations", fig.height=2.5, fig.width=4.5, dev="pdf"}
+
+mean_and_multiple <- rbind(mean.covid, multiple_sim) %>%
+  ggplot(., aes(time, value, color = variable, 
+                group = interaction(simulations, variable), 
+                size = type, 
+                alpha = type)) +
+  geom_line() +
+  facet_wrap(~Model) +
+  labs(x = "t", y = "N") +
+  scale_size_manual(values = c(1.2, 0.05)) +
+  scale_color_discrete(name = "Variable", 
+                       labels = c(expression(S[P]), expression(I[P]), 
+                                  expression(R), expression(S[S]),
+                                  expression(I[S]), expression(V), 
+                                  expression(V[1]), expression(V[2]), 
+                                  expression(I[V]), expression(S[S1]), 
+                                  expression(S[S2]), expression(I[S1]), 
+                                  expression(I[S2]))) +
+  scale_alpha_discrete(range = c(1, 0.2)) +
+  theme_AP() +
+  theme(legend.position = "none") +
+  guides(size = "none", alpha = "none")
+
+
+legend <- get_legend(mean_and_multiple + 
+                       theme(legend.position = "top", 
+                             legend.text = element_text(
+                               margin = margin(unit = "pt"))) + 
+                       guides(color = guide_legend(nrow = 3, byrow=TRUE)))
+
+plot_grid(legend, mean_and_multiple, ncol = 1, rel_heights = c(0.3, 0.7))
+
+```
 
 # A model on irrigation water withdrawals
 
@@ -1307,7 +1474,7 @@ run_model <- function(trigger, output, mat) {
   } else if(output == "water") {
     final <- (mat[, "I_a"] * (mat[, "k_c"] * et0 - mat[, "P"])) / 
       (mat[, "E_a"] * mat[, "E_c"] * mat[, "M_f"])
-    final <- final / 10^3 # Output is in m3 ha
+    final <- final * 10 #from mm to m3 ha
   }
   
   return(final)
@@ -1338,7 +1505,7 @@ run_model_rowwise <- function(I_a, Delta, A, gamma, T_a, w, v, output,
   } else if(output == "etc") {
     final <- crop.reference
   } else if(output == "water") {
-    final <- water.withdrawal / 10^3 # Output is in m3 ha
+    final <- water.withdrawal * 10 #from mm to m3 ha
   }
   return(final)
 }
@@ -1591,9 +1758,9 @@ ind.dt <- lapply(ind, function(x) rbindlist(x, idcol = "output")) %>%
 all.ind <- rbind(ind.dt, ind.all)[, original:= ifelse(original < 0, 0, original)]
 ```
 
-```{r water_plots, cache=TRUE, dependson="water_arrange_sensitivities", fig.height=5.9, fig.width=5.5}
+```{r water_plots, cache=TRUE, dependson="water_arrange_sensitivities", fig.height=4, fig.width=5.5}
 
-# CREATE PLOTS --------------------------------------------------------
+# CREATE PLOTS -------------------------------------------------------
 
 water.kt <- all.ind[sensitivity == "Ti" & original > 0.05] %>%
   .[, .(kt = length(unique(parameters))), .(et0.formulae, output)]
@@ -1621,7 +1788,9 @@ a <- merge(water.kt, water.cv, by = c("et0.formulae", "output")) %>%
                               "Irrigation \n water withdrawal"), 
                    guide = guide_axis(n.dodge = 2)) +
   labs(x = "", y = "CV") +
-  theme_AP()
+  theme_AP() +
+  theme(legend.position = c(0.35, 0.55), 
+        legend.box = "vertical") 
 
 # ks plots 
 
@@ -1636,7 +1805,7 @@ b <- all.ind[!sensitivity == "Ti", sum(original), .(et0.formulae, output, sensit
   ggplot(., aes(output, V1, fill = sensitivity)) +
   geom_col(position = position_stack(reverse = TRUE), color = "black") +
   scale_fill_manual(name = "", 
-                    labels = c("$S_i$", "$S_{i,j}$", "$S_{i,j,l}$"), 
+                    labels = c("$S_i$", "$S_{ij}$", "$S_{ijl}$"), 
                     values = wes_palette("Cavalcanti1")) +
   scale_x_discrete(labels = c("Reference \n evapotranspiration", 
                               "Crop \n evapotranspiration", 
@@ -1644,16 +1813,17 @@ b <- all.ind[!sensitivity == "Ti", sum(original), .(et0.formulae, output, sensit
                    guide = guide_axis(n.dodge = 2)) +
   scale_y_continuous(breaks = pretty_breaks(n = 3)) +
   geom_hline(yintercept = 0.99, lty = 2) +
-  labs(x = "", y = "$\\sum S_i + \\sum S_{i,j} + \\sum S_{i,j,l}$") +
+  labs(x = "", y = "$\\sum S_i + \\sum S_{ij} + \\sum S_{ijl}$") +
   annotation_custom(textGrob("p", gp = gpar(col = "red")), 
                     xmin = 0.3, xmax = 1, ymin = 0.98, ymax = 0.98) +
-  facet_wrap(~et0.formulae, labeller = as_labeller(facet_labels), ncol = 3) + 
+  facet_wrap(~et0.formulae, labeller = as_labeller(facet_labels), ncol = 1) + 
   theme_AP() +
-  theme(legend.position = "top", 
-        panel.spacing = unit(2, "lines"), 
-        axis.text.x = element_text(size = 7))
+  theme(legend.position = "none", 
+        axis.text.x = element_text(size = 9))
 
-plot_grid(a, b, ncol = 1, labels = "auto")
+legend <- get_legend(b + theme(legend.position = "top"))
+bottom <- plot_grid(a, b, ncol = 2, labels = "auto", rel_widths = c(0.52, 0.48))
+plot_grid(legend, bottom, ncol = 1, rel_heights = c(0.1, 0.9))
 
 all.ind[!sensitivity == "Ti", round(sum(original), 3), .(et0.formulae, output, sensitivity)]
 ```
@@ -1795,6 +1965,8 @@ sobolg.plot <- ggplot(dt, aes(k.t, CV, color = sum.si, shape = k.s)) +
                        name = "$\\sum_{i=1}^{k} S_i$") +
   scale_shape_discrete(name = "$k_s$", 
                        labels = c("1", "2", "3", "$\\geq 4$")) +
+  geom_rect(aes(xmin = 1.8, xmax = 5.2, ymin = 0.6, ymax = 1), color = "black", 
+            size = 0.5, fill = NA) +
   theme_AP()
 
 sobolg.plot
@@ -2063,4 +2235,29 @@ plot_grid(sobolg.plot, meta.plot, ncol = 1, labels = c("a", ""),
 
 plot_grid(plot.metafunction, meta.plot, rel_heights = c(0.65, 0.35), 
           rel_widths = c(0.7, 0.3), ncol = 1)
+```
+
+```{r plot_metafunction, cache=TRUE, dependson=c("merge_plots_cv"), fig.width = 4.7, fig.height = 2.5}
+
+bottom <- plot_grid(a, b, ncol = 2, labels = c("a", "b"))
+meta.plot <- plot_grid(legend, bottom, ncol = 1, rel_heights = c(0.1, 0.9))
+meta.plot
+```
+
+# Session information
+
+```{r system}
+
+# SESSION INFORMATION -----------------------------------------------------------
+
+sessionInfo()
+
+## Return the machine CPU
+cat("Machine:     "); print(get_cpu()$model_name)
+
+## Return number of true cores
+cat("Num cores:   "); print(detectCores(logical = FALSE))
+
+## Return number of threads
+cat("Num threads: "); print(detectCores(logical = FALSE))
 ```

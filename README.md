@@ -1,12 +1,12 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4940173.svg)](https://doi.org/10.5281/zenodo.4940173)
 
-# Models with higher effective dimensions produce more uncertain estimates
+# Models with higher effective dimensions tend to produce more uncertain estimates
 
 Arnald Puy, Pierfrancesco Beneventano, Simon A. Levin, Samuele Lo Piano, Tommaso Portaluri, Andrea Saltelli
 
 This is the R code of the paper, whose abstract is the following: 
 
-*Mathematical models are routinely used in many scientific fields to predict the behavior of intricate phenomena, gain insights into the dynamics of a system of interest or inform policy-making. In the last decades models have been getting increasingly fine-grained on the assumption that the addition of detail ultimately leads to more accurate outputs. Here we show that model complexification tends instead to yield fuzzier estimates due to the increase in the model's effective dimensions. We use ANOVA and statistical theory to show that more complex models tend to have more active terms and higher-order effects, which increase the output variance. Model-based disciplines may benefit from reconsidering the pursuit of ever-complex models as a mean to progressively constrain uncertainties in our understanding of the world*. 
+*Mathematical models are routinely used to predict the behavior of phenomena, gain insights into the dynamics of a system of interest or inform policy-making. Although it is known that the addition of model detail might boost the output variance, models are nevertheless becoming finer-grained on the assumption that more data, computational power and ever-detailed algorithms will progressively bound uncertainties. Here we show through ANOVA and statistical theory that model complexification tends to promote fuzzier estimates because it generally increases the model's effective dimensions, e.g., the number of active terms and higher-order effects. By tracking the evolution of the effective dimensions and the output uncertainty at each model upgrade stage, modelers can better ponder whether the addition of detail truly matches the model's purpose and the quality of the data fed into it*. 
 
 ## Information
 
