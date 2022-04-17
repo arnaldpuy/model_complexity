@@ -2,11 +2,11 @@
 
 # Models with higher effective dimensions tend to produce more uncertain estimates
 
-Arnald Puy, Pierfrancesco Beneventano, Simon A. Levin, Samuele Lo Piano, Tommaso Portaluri, Andrea Saltelli
+Arnald Puy, Simon A. Levin, Samuele Lo Piano, Andrea Saltelli
 
 This is the R code of the paper, whose abstract is the following: 
 
-*Mathematical models are routinely used to predict the behavior of phenomena, gain insights into the dynamics of a system of interest or inform policy-making. Although it is known that the addition of model detail might boost the output variance, models are nevertheless becoming finer-grained on the assumption that more data, computational power and ever-detailed algorithms will progressively bound uncertainties. Here we show through ANOVA and statistical theory that model complexification tends to promote fuzzier estimates because it generally increases the model's effective dimensions, e.g., the number of active terms and higher-order effects. By tracking the evolution of the effective dimensions and the output uncertainty at each model upgrade stage, modelers can better ponder whether the addition of detail truly matches the model's purpose and the quality of the data fed into it*. 
+*Mathematical models are getting increasingly detailed to predict phenomena, gain insights into the dynamics of a system of interest or inform policy-making, even when there is no evidence with which to gauge the quality of the model. The underlying assumption is that ever-detailed descriptions of the natural world will progressively bound uncertainties and lead to more accurate estimates. Here we show through ANOVA and statistical theory that this practice tends instead to promote fuzzier estimates because it generally increases the model's effective dimensions, e.g., the number of influential parameters and the weight of high-order effects. By tracking the evolution of the effective dimensions and the output uncertainty at each model upgrade stage, modelers can better ponder whether the addition of detail truly matches the model's purpose and the quality of the data fed into it*. 
 
 ## Information
 

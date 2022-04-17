@@ -2,6 +2,13 @@
 knitr::opts_chunk$set(echo = TRUE, dev = "tikz")
 
 
+
+
+
+
+
+
+
 ## ----packages, results="hide", message=FALSE, warning=FALSE---------------------------
 
 # PRELIMINARY FUNCTIONS ----------------------------------------------------------
@@ -571,8 +578,8 @@ cv.bateman
 
 # SENSITIVITY ANALYSIS -----------------------------------------------------------
 
-order <- "third"
-k <- 3:10
+order <- "fourth"
+k <- 4:10
 sample.size <- 2 ^ 15
 matrices <- c("A", "B", "AB", "BA")
 first <- "azzini"
@@ -673,6 +680,9 @@ high.order.bateman <- ind.bateman[!sensitivity == "Ti"] %>%
   theme_AP() +
   theme(legend.position = "none", 
         axis.title.y = element_text(size = 7))
+
+
+ind.bateman[dim == 6]
 
   
 high.order.bateman
